@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
+
+cacheDirAbsPath = None
 
 class NaiveBuckCacheServerRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -50,6 +53,7 @@ class NaiveBuckCacheServerRequestHandler(BaseHTTPRequestHandler):
         # TODO 
         # save those data
 
+
         print('----')
 
 
@@ -65,7 +69,19 @@ Usage: {} <port> <cache-dir>
     port = int(sys.argv[1])
     cacheDir = sys.argv[2]
 
-    print('start naive buck cache server on port %d' % (port))
+    absPath = os.path.abspath(cacheDir)
+    if not os.path.exists(absPath):
+        print('Cache dir %s doesn\'t exist, creating...' % (absPath))
+        try:
+            os.makedirs(absPath)
+        except:
+            print('Failed to create cache dir with path: %s' % (absPath))
+            sys.exit()
+
+    cacheDirAbsPath = absPath
+
+    print('Start naive buck cache server on port %d' % (port))
+    print('Cache dir: %s' % (cacheDirAbsPath))
 
     server = HTTPServer(("", port), NaiveBuckCacheServerRequestHandler)
     server.serve_forever()
