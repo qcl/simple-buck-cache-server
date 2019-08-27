@@ -10,6 +10,7 @@ class NaiveBuckCacheServerRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         print("#GET " + self.path)
         self.send_response(404)
+        self.end_headers()
         return
 
     def do_PUT(self):
@@ -17,23 +18,20 @@ class NaiveBuckCacheServerRequestHandler(BaseHTTPRequestHandler):
 
         if not self.path.startswith('/artifacts/key'):
             self.send_response(406)
+            self.end_headers()
             return
 
         self.send_response(202)
-        print('=======')
-        print('path = ' + self.path)
+        self.end_headers()
 
-        print('headers:')
-        print(self.headers)
-
-        contentLength = int(self.headers.getheader('Content-Length'))
+        contentLength = int(self.headers['Content-Length'])
         read = 0
 
         # key count
         keyCountBytes = self.rfile.read(4)
         read += 4
         keyCount = int.from_bytes(keyCountBytes, byteorder='big', signed=True)
-        print(keyCount)
+        #print(keyCount)
 
         # read keys
         keys = []
@@ -44,18 +42,27 @@ class NaiveBuckCacheServerRequestHandler(BaseHTTPRequestHandler):
 
             keyBytes = self.rfile.read(keyLen)
             key = keyBytes.decode()
-            print('key = ' + key)
+            #print('key = ' + key)
             keys.append(key)
 
         # data
         cacheData = self.rfile.read(contentLength - read)
 
-        # TODO 
         # save those data
+        # TODO: optimize the use of cache
+        # NOTE: key --> intermediate unique key --> data
+        for key in keys:
+            cacheFileName = '%s.buckcache' % (key)
+            cacheFilePath = os.path.join(cacheDirAbsPath, cacheFileName)
 
+            if os.path.exists(cacheFilePath):
+                print('Cache file %s is already there' % (cacheFileName))
 
-        print('----')
+            f = open(cacheFilePath, 'wb')
+            f.write(cacheData)
+            f.close()
 
+            print('Cache saved for key %s' % (key))
 
 
 if __name__ == '__main__':
