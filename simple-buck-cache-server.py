@@ -112,6 +112,6 @@ if __name__ == '__main__':
     print('Start naive buck cache server on port %d' % (port))
     print('Cache dir: %s' % (cacheDirAbsPath))
 
-    server = HTTPServer(("", port), NaiveBuckCacheServerRequestHandler)
+    server = HTTPServer(("0.0.0.0", port), NaiveBuckCacheServerRequestHandler)
     server.serve_forever()
 
