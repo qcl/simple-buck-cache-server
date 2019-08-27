@@ -3,15 +3,39 @@
 import sys
 import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from urllib.parse import urlparse
 
 cacheDirAbsPath = None
 
 class NaiveBuckCacheServerRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         print("#GET " + self.path)
-        self.send_response(404)
+        if not self.path.startswith('/artifacts/key'):
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        parseResult = urlparse(self.path)
+        key = os.path.basename(parseResult.path)
+
+        cacheFileName = '%s.buckcache' % (key)
+        cacheFileSearchPath = os.path.join(cacheDirAbsPath, cacheFileName)
+
+        if not os.path.exists(cacheFileSearchPath):
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        print('Cache found for key %s' % (key))
+        f = open(cacheFileSearchPath, 'rb')
+        cachedBytes = f.read()
+        f.close()
+
+        self.send_response(200)
+        self.send_header('Content-type', 'application/octet-stream')
         self.end_headers()
-        return
+        self.wfile.write(cachedBytes)
+
 
     def do_PUT(self):
         print("#PUT " + self.path)
@@ -68,9 +92,7 @@ class NaiveBuckCacheServerRequestHandler(BaseHTTPRequestHandler):
 if __name__ == '__main__':
 
     if len(sys.argv) != 3:
-        print("""
-Usage: {} <port> <cache-dir>
-            """.format(sys.argv[0]))
+        print("Usage: %s <port> <cache-dir>" % (sys.argv[0]))
         sys.exit()
 
     port = int(sys.argv[1])
@@ -92,6 +114,4 @@ Usage: {} <port> <cache-dir>
 
     server = HTTPServer(("", port), NaiveBuckCacheServerRequestHandler)
     server.serve_forever()
-
-
 
